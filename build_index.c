@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+#include "p2random_v2.c"
 #include <limits.h>
+
 
 int CAP = 100;
 
@@ -96,14 +97,10 @@ int main(int argc, char** argv) {
     should_do[l] = 1;
   }
 
-
-  int keys[k];
-  srand(time(NULL));
-  for(int i = 0; i<k; i++){
-    keys[i] = rand() % CAP;
-  }
-
-  qsort(keys, k, sizeof(int), cmpfunc);
+  rand32_t *gen = rand32_init(time(NULL));
+  size_t i, n = argc > 1 ? atoll(argv[1]) : 10;
+  int32_t *keys = generate_sorted_unique(n, gen);
+  free(gen);
 
   current = levels_n - 1;
   while(i < k){
@@ -141,5 +138,7 @@ int main(int argc, char** argv) {
     }
   }
   printf(" ] \n");
+
+  free(keys);
   return 0;
 }
