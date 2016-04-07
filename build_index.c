@@ -85,7 +85,14 @@ RangeIndex build_index(int k, int levels_n, int *fanouts){
 
   current = levels_n - 1;
   size_t *level;
-
+//initialze to MAX INT
+  for(int i=0; i<levels_n; i++){
+    level = index[i];
+    for(int j=0; j<level_sizes[i]; j++){
+      level[j] = INT_MAX;
+    }
+  }
+  //build for real
   while(key < k){
 
     while(should_do[current] == 0){
