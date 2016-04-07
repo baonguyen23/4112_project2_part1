@@ -4,12 +4,117 @@
 #include "p2random_v2.c"
 #include <limits.h>
 
+typedef struct {
+  int* level_sizes;
+  size_t ** index;
+  int didFail;
+}RangeIndex;
 
-int CAP = 100;
+RangeIndex build_index(int k, int levels_n, int *fanouts){
+  RangeIndex range_index;
+  //initialize an array to store how large each level should be
+  int* level_sizes = malloc(levels_n * sizeof(int));
+  for(int l = 0; l<levels_n; l++){
+    level_sizes[l] = 0;
+  }
 
-int cmpfunc (const void * a, const void * b)
-{
-  return ( *(int*)a - *(int*)b );
+  //find size for each level
+  int key = 0;
+  int should_do[levels_n];
+  for(int l=0; l<levels_n; l++){
+    should_do[l] = 1;
+  }
+  int current = levels_n - 1;
+
+  while(key < k){
+    while(should_do[current] == 0){
+      current -= 1;
+    }
+
+    if(current < 0){
+      printf("Error: Not enough keys! \n");
+      range_index.didFail = 1;
+      return range_index;
+    }
+
+    level_sizes[current]++;
+
+    for(int reset=levels_n-1; reset > current; reset--){
+      should_do[reset] = 1;
+    }
+
+    if(level_sizes[current] % (fanouts[current] - 1 ) == 0){
+      should_do[current] = 0;
+    }
+    current = levels_n - 1;
+    key++;
+  }
+
+  //find padding for each level
+  for(int i=0; i < levels_n; i++){
+    printf("levels[%d] = %d\n", i, level_sizes[i]);
+    level_sizes[i] += (level_sizes[i] % (fanouts[i]-1));
+  }
+
+  //create index
+  size_t **index = malloc(sizeof(size_t*)*levels_n);
+  void *ptr;
+  for(int i=0; i<levels_n; i++){
+    if(posix_memalign(&ptr, 16, sizeof(size_t) * level_sizes[i]) != 0){
+      printf("Failed to allocate memory\n");
+      range_index.didFail = 1;
+      return range_index;
+    }
+    index[i] = ptr;
+  }
+//hold a count of how many keys we've
+//added for each level
+  int level_counts[levels_n];
+  for(int i=0; i<levels_n; i++){
+    level_counts[i] = 0; //initialize
+  }
+
+  key = 0;
+  for(int l=0; l<levels_n; l++){
+    should_do[l] = 1;
+  }
+
+  rand32_t *gen = rand32_init(time(NULL));
+  int32_t *keys = generate_sorted_unique(k, gen);
+  free(gen);
+
+  current = levels_n - 1;
+  size_t *level;
+
+  while(key < k){
+
+    while(should_do[current] == 0){
+      current -= 1;
+    }
+
+    level = index[current];
+    level[level_counts[current]] = keys[key];
+    level_counts[current]++;
+
+    for(int reset=levels_n-1; reset > current; reset--){
+      should_do[reset] = 1;
+    }
+
+    //if node full
+    if(level_counts[current] % (fanouts[current] - 1 ) == 0){
+      should_do[current] = 0;
+    }
+
+    current = levels_n - 1;
+    key++;
+
+  }
+
+  //clean up and return
+  free(keys);
+  range_index.index = index;
+  range_index.level_sizes = level_sizes;
+  return range_index;
 }
 
 int main(int argc, char** argv) {
@@ -23,122 +128,30 @@ int main(int argc, char** argv) {
   int levels_n = argc - 4;
   int k = atoi(argv[2]);
   int p = atoi(argv[3]);
-  int fanouts[levels_n];
+  int* fanouts = malloc(levels_n * sizeof(int));
   for(int f = 0; f<levels_n; f++){
     fanouts[f] = atoi(argv[4+f]);
   }
+  RangeIndex range_index = build_index(k, levels_n, fanouts);
 
-  //initialize an array to store how large each level should be
-  int level_sizes[levels_n];
-  for(int l = 0; l<levels_n; l++){
-    level_sizes[l] = 0;
-  }
-
-  //find size for each level
-  int i = 0;
-  int should_do[levels_n];
-  for(int l=0; l<levels_n; l++){
-    should_do[l] = 1;
-  }
-  int current = levels_n - 1;
-
-  while(i < k){
-    while(should_do[current] == 0){
-      current -= 1;
-    }
-
-    if(current < 0){
-      printf("Error: Not enough keys! \n");
-      return 0;
-    }
-
-    level_sizes[current]++;
-
-    for(int reset=levels_n-1; reset > current; reset--){
-      should_do[reset] = 1;
-    }
-
-    if(level_sizes[current] % (fanouts[current] - 1 ) == 0){
-      should_do[current] = 0;
-    }
-    current = levels_n - 1;
-    i++;
-  }
-
-  //find padding for each level and total index size
-  int total_index_size=0;
-  for(int i=0; i < levels_n; i++){
-    printf("levels[%d] = %d\n", i, level_sizes[i]);
-    level_sizes[i] += (level_sizes[i] % (fanouts[i]-1));
-    total_index_size += level_sizes[i];
-  }
-
-  //create index
-  int index[total_index_size];
-  for(int i=0; i<total_index_size; i++){
-    index[i] = INT_MAX;
-  }
-
-  int level_counts[levels_n];
-
-  int level_starts[levels_n];
-  level_starts[0] = 0;
-  level_counts[0] = 0;
-  for(int i=1; i<levels_n; i++){
-    level_starts[i]= level_starts[i-1] + level_sizes[i-1];
-    level_counts[i] = 0; //initialize
-  }
-
-  int level_locs[levels_n];
-  memcpy(level_locs, level_starts, sizeof(int)*levels_n);
-
-  i = 0;
-  for(int l=0; l<levels_n; l++){
-    should_do[l] = 1;
-  }
-
-  rand32_t *gen = rand32_init(time(NULL));
-  size_t i, n = argc > 1 ? atoll(argv[1]) : 10;
-  int32_t *keys = generate_sorted_unique(n, gen);
-  free(gen);
-
-  current = levels_n - 1;
-  while(i < k){
-    while(should_do[current] == 0){
-      current -= 1;
-    }
-
-    level_counts[current]++;
-
-    index[level_locs[current]] = keys[i];
-    level_locs[current]++;
-
-    for(int reset=levels_n-1; reset > current; reset--){
-      should_do[reset] = 1;
-    }
-
-    if(level_counts[current] % (fanouts[current] - 1 ) == 0){
-      should_do[current] = 0;
-    }
-    current = levels_n - 1;
-    i++;
-  }
-
-  printf("\n[ ");
-  int current_level = 1;
-  for(int i=0; i<total_index_size; i++){
-
-    if(index[i] == INT_MAX)
+  size_t *level;
+  for(int i=0; i<levels_n; i++){
+    level = range_index.index[i];
+    printf("\n[ ");
+    for(int j=0; j<range_index.level_sizes[i]; j++){
+      if(level[j] == INT_MAX)
       printf("MI ");
-    else printf("%d ", index[i]);
-
-    if(i == level_starts[current_level]-1){
-      printf("] \n[ ");
-      current_level++;
+      else printf("%zu ", level[j]);
     }
+    printf(" ] \n");
   }
-  printf(" ] \n");
 
-  free(keys);
+  //clean up
+
+  for(int i=0; i<levels_n; i++){
+    free(range_index.index[i]);
+  }
+  free(range_index.index);
+  free(range_index.level_sizes);
   return 0;
 }

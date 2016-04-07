@@ -108,6 +108,7 @@ void ratio_per_bit(const int32_t *a, size_t n)
 	free(c);
 }
 
+/** EXAMPLE USE
 int main(int argc, char **argv)
 {
 	rand32_t *gen = rand32_init(time(NULL));
@@ -120,3 +121,5 @@ int main(int argc, char **argv)
 	free(a);
 	return EXIT_SUCCESS;
 }
+
+**/
