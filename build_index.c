@@ -6,7 +6,7 @@
 
 typedef struct {
   int* level_sizes;
-  size_t ** index;
+  int32_t  ** index;
   int didFail;
 }RangeIndex;
 
@@ -57,10 +57,10 @@ RangeIndex build_index(int k, int levels_n, int *fanouts){
   }
 
   //create index
-  size_t **index = malloc(sizeof(size_t*)*levels_n);
+  int32_t  **index = malloc(sizeof(int32_t *)*levels_n);
   void *ptr;
   for(int i=0; i<levels_n; i++){
-    if(posix_memalign(&ptr, 16, sizeof(size_t) * level_sizes[i]) != 0){
+    if(posix_memalign(&ptr, 16, sizeof(int32_t ) * level_sizes[i]) != 0){
       printf("Failed to allocate memory\n");
       range_index.didFail = 1;
       return range_index;
@@ -84,7 +84,7 @@ RangeIndex build_index(int k, int levels_n, int *fanouts){
   free(gen);
 
   current = levels_n - 1;
-  size_t *level;
+  int32_t  *level;
 //initialze to MAX INT
   for(int i=0; i<levels_n; i++){
     level = index[i];
@@ -124,41 +124,76 @@ RangeIndex build_index(int k, int levels_n, int *fanouts){
   return range_index;
 }
 
+int findNextNode(int stopKey, int32_t * level,
+  int startKey, int probe){
+  for(int i = startKey; i<stopKey; i++){
+    if(int32_cmp(&level[i], &probe) > 0){
+      return i;
+    }
+  }
+  return -1;
+}
+
+int probe(RangeIndex range_index, int levels_n,
+  int* fanouts, int32_t  probe){
+    int32_t * level;
+    int nextNode = 0;
+    int stopKey = range_index.level_sizes[0];
+    for(int level_idx = 0; level_idx<levels_n; level_idx++){
+      level = range_index.index[level_idx];
+      nextNode = findNextNode(stopKey,
+                              level,
+                              nextNode*fanouts[level_idx], probe);
+      nextNode = (nextNode == -1) ? fanouts[level_idx]+1 : nextNode;
+      if(level_idx +1 < levels_n){
+            stopKey = fanouts[level_idx]* (fanouts[level_idx+1]-1);
+      }
+    }
+  return nextNode;
+}
+
 int main(int argc, char** argv) {
-  if(argc < 5 || strcmp("build", argv[1]) !=0 ){
+  if(argc < 4){
     printf("Usage: build K P <fanouts> \n ");
-    printf("argc %d \n", argc);
-    printf("%d\n",strcmp("build", argv[1]));
     return 0;
   }
   //gather input
-  int levels_n = argc - 4;
-  int k = atoi(argv[2]);
-  int p = atoi(argv[3]);
+  int levels_n = argc - 3;
+  int k = atoi(argv[1]);
+  int p = atoi(argv[2]);
   int* fanouts = malloc(levels_n * sizeof(int));
   for(int f = 0; f<levels_n; f++){
-    fanouts[f] = atoi(argv[4+f]);
+    fanouts[f] = atoi(argv[3+f]);
   }
   RangeIndex range_index = build_index(k, levels_n, fanouts);
 
-  size_t *level;
+  int32_t  *level;
   for(int i=0; i<levels_n; i++){
     level = range_index.index[i];
     printf("\n[ ");
     for(int j=0; j<range_index.level_sizes[i]; j++){
       if(level[j] == INT_MAX)
       printf("MI ");
-      else printf("%zu ", level[j]);
+      else printf("%d ", level[j]);
     }
     printf(" ] \n");
   }
 
-  //clean up
+  rand32_t *gen = rand32_init(time(NULL));
+  int32_t *probes = generate(p, gen);
+  free(gen);
+
+  for(int i = 0; i<p; i++){
+    int range = probe(range_index, levels_n, fanouts, probes[i]);
+    printf("probe %d: %d\n", probes[i], range);
+}
+//clean up
 
   for(int i=0; i<levels_n; i++){
     free(range_index.index[i]);
   }
   free(range_index.index);
   free(range_index.level_sizes);
+  free(probes);
   return 0;
 }
