@@ -1,13 +1,13 @@
 CC = gcc
 CFLAGS = -c -Wall
 
-all: main
+all: build
 
-main: main.o
-	$(CC) main.o -o main
+build: main.o
+	$(CC) main.o -o build
 
 main.o: main.c
 	$(CC) $(CFLAGS) main.c
 
 clean:
-	rm -rf *.o main
+	rm -rf *.o build
