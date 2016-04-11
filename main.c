@@ -193,6 +193,11 @@ int main(int argc, char** argv) {
   }
   RangeIndex range_index = build_index(k, levels_n, fanouts);
 
+  if(range_index.didFail == 1){
+    free(fanouts);
+    return 0;
+  }
+
   int32_t  *level;
   for(int i=0; i<levels_n; i++){
     level = range_index.index[i];
