@@ -6,13 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <xmmintrin.h> SSE
-#include <emmintrin.h> SSE2
-#include <pmmintrin.h> SSE3
-#include <tmmintrin.h> SSSE3
-#include <smmintrin.h> SSE4.1
-#include <nmmintrin.h> SSE4.2
-#include <ammintrin.h> SSE4A
+#include <xmmintrin.h>// SSE
+#include <emmintrin.h>// SSE2
+#include <pmmintrin.h>// SSE3
+#include <tmmintrin.h>// SSSE3
+#include <smmintrin.h>// SSE4.1
+#include <nmmintrin.h>// SSE4.2
+#include <ammintrin.h>// SSE4A
 
 extern int posix_memalign(void** memptr, size_t alignment, size_t size);
 size_t alignment = 16;
@@ -116,48 +116,48 @@ uint32_t probe_index_part1(Tree* tree, int32_t probe_key) {
 }
 
 uint32_t probe_index_part2_hardcoded(Tree* tree, int32_t probe_key) {
-  // access level 0 of the index (9-way)
-   lvl_0 = _mm_load_si128(&tree.key_array[0]);
-   cmp_0 = _mm_cmpgt_epi32(lvl_0, probe_key);
-   r_0 = _mm_movemask_ps(cmp_0); // ps: epi32
-   r_0 = _bit_scan_forward(r_0 ^ 0x1FFFF);
+// access level 0 of the index (9-way)
+ __m128i lvl_0 = _mm_load_si128(&tree.key_array[0]);
+ __m128i cmp_0 = _mm_cmpgt_epi32(lvl_0, probe_key);
+ __m128i r_0 = _mm_movemask_ps(cmp_0); // ps: epi32
+ r_0 = _bit_scan_forward(r_0 ^ 0x1FFFF);
 
 // access level 1 (non-root) of the index (5-way)
- lvl_1 = _mm_load_si128(&index_L1[r_0 << 2]);
- cmp_1 = _mm_cmpgt_epi32(lvl_1, key);
- r_1 = _mm_movemask_ps(cmp_1); // ps: epi32
+ __m128i lvl_1 = _mm_load_si128(&index_L1[r_0 << 2]);
+ __m128i cmp_1 = _mm_cmpgt_epi32(lvl_1, probe_key);
+ __m128i r_1 = _mm_movemask_ps(cmp_1); // ps: epi32
  r_1 = _bit_scan_forward(r_1 ^ 0x1FF);
  r_1 += (r_0 << 2) + r_0;
  // access level 2 of the index (9-way)
- lvl_2_A = _mm_load_si128(&index_L2[ r_1 << 3]);
- lvl_2_B = _mm_load_si128(&index_L2[(r_1 << 3) + 4]);
- cmp_2_A = _mm_cmpgt_epi32(lvl_2_A, key);
- cmp_2_B = _mm_cmpgt_epi32(lvl_2_B, key);
- cmp_2 = _mm_packs_epi32(cmp_2_A, cmp_2_B);
+ __m128i lvl_2_A = _mm_load_si128(&index_L2[ r_1 << 3]);
+ __m128i lvl_2_B = _mm_load_si128(&index_L2[(r_1 << 3) + 4]);
+ __m128i cmp_2_A = _mm_cmpgt_epi32(lvl_2_A, probe_key);
+ __m128i cmp_2_B = _mm_cmpgt_epi32(lvl_2_B, probe_key);
+ __m128i cmp_2 = _mm_packs_epi32(cmp_2_A, cmp_2_B);
  cmp_2 = _mm_packs_epi16(cmp_2, _mm_setzero_si128());
- r_2 = _mm_movemask_epi8(cmp_2);
+ __m128i r_2 = _mm_movemask_epi8(cmp_2);
  r_2 = _bit_scan_forward(r_2 ^ 0x1FFFF);
  r_2 += (r_1 << 3) + r_1;
 }
 
-uint32_t probe_index_part2(Tree* tree, int32_t probe_key) {
-  //Copy 32-bit integer a to the lower elements of dst,
-  // and zero the upper elements of dst.
-  key = _mm_cvtsi32_si128(input_keys[i++]);
-  //Shuffle 32-bit integers in a using the control in imm8,
-  //and store the results in dst.
-  key = _mm_shuffle_epi32(key, _MM_SHUFFLE(0,0,0,0));
-
-// Load 128-bits of integer data from memory into dst.
-// mem_addr must be aligned on a 16-byte boundary or a
-//  general-protection exception may be generated.
- __m128i k = _mm_load_si128((__m128i*) &probe_keys[i]);
-
- register __m128i k1 = _mm_shuffle_epi32(k, _MM_SHUFFLE(0,0,0,0));
- register __m128i k2 = _mm_shuffle_epi32(k, _MM_SHUFFLE(1,1,1,1));
- register __m128i k3 = _mm_shuffle_epi32(k, _MM_SHUFFLE(2,2,2,2));
- register __m128i k4 = _mm_shuffle_epi32(k, _MM_SHUFFLE(3,3,3,3));
-}
+// uint32_t probe_index_part2(Tree* tree, int32_t probe_key) {
+//   //Copy 32-bit integer a to the lower elements of dst,
+//   // and zero the upper elements of dst.
+//   key = _mm_cvtsi32_si128(input_keys[i++]);
+//   //Shuffle 32-bit integers in a using the control in imm8,
+//   //and store the results in dst.
+//   key = _mm_shuffle_epi32(key, _MM_SHUFFLE(0,0,0,0));
+//
+// // Load 128-bits of integer data from memory into dst.
+// // mem_addr must be aligned on a 16-byte boundary or a
+// //  general-protection exception may be generated.
+//  __m128i k = _mm_load_si128((__m128i*) &probe_keys[i]);
+//
+//  register __m128i k1 = _mm_shuffle_epi32(k, _MM_SHUFFLE(0,0,0,0));
+//  register __m128i k2 = _mm_shuffle_epi32(k, _MM_SHUFFLE(1,1,1,1));
+//  register __m128i k3 = _mm_shuffle_epi32(k, _MM_SHUFFLE(2,2,2,2));
+//  register __m128i k4 = _mm_shuffle_epi32(k, _MM_SHUFFLE(3,3,3,3));
+// }
 
 void cleanup_index(Tree* tree) {
         free(tree->node_capacity);
