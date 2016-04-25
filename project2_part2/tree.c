@@ -6,13 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <xmmintrin.h>// SSE
-#include <emmintrin.h>// SSE2
-#include <pmmintrin.h>// SSE3
-#include <tmmintrin.h>// SSSE3
-#include <smmintrin.h>// SSE4.1
-#include <nmmintrin.h>// SSE4.2
-#include <ammintrin.h>// SSE4A
+#include <xmmintrin.h> SSE
+#include <emmintrin.h> SSE2
+#include <pmmintrin.h> SSE3
+#include <tmmintrin.h> SSSE3
+#include <smmintrin.h> SSE4.1
+#include <nmmintrin.h> SSE4.2
+#include <ammintrin.h> SSE4A
 
 extern int posix_memalign(void** memptr, size_t alignment, size_t size);
 size_t alignment = 16;
@@ -116,7 +116,7 @@ uint32_t probe_index_part1(Tree* tree, int32_t probe_key) {
 }
 
 uint32_t probe_index_part2_hardcoded(Tree* tree, int32_t probe_key) {
-  // access level 0 of the index (5-way)
+  // access level 0 of the index (9-way)
    lvl_0 = _mm_load_si128(&tree.key_array[0]);
    cmp_0 = _mm_cmpgt_epi32(lvl_0, probe_key);
    r_0 = _mm_movemask_ps(cmp_0); // ps: epi32
