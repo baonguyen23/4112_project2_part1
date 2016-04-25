@@ -116,10 +116,16 @@ uint32_t probe_index_part1(Tree* tree, int32_t probe_key) {
 }
 
 uint32_t probe_index_part2_hardcoded(Tree* tree, int32_t probe_key) {
-  // access level 1 (non-root) of the index (5-way)
+  // access level 0 of the index (5-way)
+   lvl_0 = _mm_load_si128(&tree.key_array[0]);
+   cmp_0 = _mm_cmpgt_epi32(lvl_0, probe_key);
+   r_0 = _mm_movemask_ps(cmp_0); // ps: epi32
+   r_0 = _bit_scan_forward(r_0 ^ 0x1FFFF);
+
+// access level 1 (non-root) of the index (5-way)
  lvl_1 = _mm_load_si128(&index_L1[r_0 << 2]);
  cmp_1 = _mm_cmpgt_epi32(lvl_1, key);
- msk_1 = _mm_movemask_ps(cmp_1); // ps: epi32
+ r_1 = _mm_movemask_ps(cmp_1); // ps: epi32
  r_1 = _bit_scan_forward(r_1 ^ 0x1FF);
  r_1 += (r_0 << 2) + r_0;
  // access level 2 of the index (9-way)
@@ -129,7 +135,7 @@ uint32_t probe_index_part2_hardcoded(Tree* tree, int32_t probe_key) {
  cmp_2_B = _mm_cmpgt_epi32(lvl_2_B, key);
  cmp_2 = _mm_packs_epi32(cmp_2_A, cmp_2_B);
  cmp_2 = _mm_packs_epi16(cmp_2, _mm_setzero_si128());
- msk_2 = _mm_movemask_epi8(cmp_2);
+ r_2 = _mm_movemask_epi8(cmp_2);
  r_2 = _bit_scan_forward(r_2 ^ 0x1FFFF);
  r_2 += (r_1 << 3) + r_1;
 }
