@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
         // perform index probing (Phase 2)
         for (size_t i = 0; i < num_probes; ++i) {
-                result[i] = probe_index(tree, probe[i]);
+                result[i] = probe_index_part2_hardcoded(tree, probe[i]);
         }
 
         // output results
