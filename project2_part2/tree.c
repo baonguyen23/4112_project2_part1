@@ -13,6 +13,10 @@
 #include <smmintrin.h>// SSE4.1
 #include <nmmintrin.h>// SSE4.2
 #include <ammintrin.h>// SSE4A
+#include <x86intrin.h>
+#include <immintrin.h>// _bit_scan_forward
+
+
 
 extern int posix_memalign(void** memptr, size_t alignment, size_t size);
 size_t alignment = 16;
@@ -116,17 +120,17 @@ uint32_t probe_index_part1(Tree* tree, int32_t probe_key) {
 }
 
 uint32_t probe_index_part2_hardcoded(Tree* tree, int32_t probe_key) {
-   __m128i k = _mm_load_si128((__m128i*) &probe_key);
-  // access level 0 of the index (5-way)
-   __m128i lvl_0 = _mm_load_si128((__m128i*) tree->key_array[0]);
-   __m128i cmp_0 = _mm_cmpgt_epi32(lvl_0, k);
-   int r_0 = _mm_movemask_ps(cmp_0); // ps: epi32
-   r_0 = _bit_scan_forward(r_0 ^ 0x1FFFF);
+ __m128i k = _mm_load_si128((__m128i*) &probe_key);
+// access level 0 of the index (5-way)
+ __m128i lvl_0 = _mm_load_si128((__m128i*) tree->key_array[0]);
+ __m128i cmp_0 = _mm_cmpgt_epi32(lvl_0, k);
+ int r_0 = _mm_movemask_ps((__m128)(cmp_0)); // ps: epi32
+ r_0 = _bit_scan_forward(r_0 ^ 0x1FFFF);
 
 // access level 1 (non-root) of the index (5-way)
  __m128i lvl_1 = _mm_load_si128((__m128i*) tree->key_array[r_0 << 2]);
  __m128i cmp_1 = _mm_cmpgt_epi32(lvl_1, k);
- int r_1 = _mm_movemask_ps(cmp_1); // ps: epi32
+ int r_1 = _mm_movemask_ps((__m128)(cmp_1)); // ps: epi32
  r_1 = _bit_scan_forward(r_1 ^ 0x1FF);
  r_1 += (r_0 << 2) + r_0;
  // access level 2 of the index (9-way)
@@ -139,6 +143,8 @@ uint32_t probe_index_part2_hardcoded(Tree* tree, int32_t probe_key) {
  int r_2 = _mm_movemask_epi8(cmp_2);
  r_2 = _bit_scan_forward(r_2 ^ 0x1FFFF);
  r_2 += (r_1 << 3) + r_1;
+
+ //return (uint32_t)(r_2);
 }
 
 // uint32_t probe_index_part2(Tree* tree, int32_t probe_key) {
